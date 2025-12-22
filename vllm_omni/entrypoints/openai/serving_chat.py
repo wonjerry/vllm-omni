@@ -261,8 +261,11 @@ class OmniOpenAIServingChat(OpenAIServingChat):
         assert len(generators) == 1
         (result_generator,) = generators
 
-        # Streaming response
-        if request.stream:
+        # Check if audio is in output modalities - streaming with audio is not yet supported
+        has_audio_output = output_modalities and "audio" in output_modalities
+
+        # Streaming response (only for text-only output)
+        if request.stream and not has_audio_output:
             return self.chat_completion_stream_generator(
                 request,
                 result_generator,
