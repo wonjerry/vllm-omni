@@ -462,7 +462,9 @@ class OmniOpenAIServingChat(OpenAIServingChat):
             async for res in result_generator:
                 # For non-streaming, only keep the final result (finished=True)
                 # Skip intermediate streaming results
-                if getattr(res, "finished", True):
+                is_finished = getattr(res, "finished", True)
+                logger.debug(f"[DEBUG] OmniRequestOutput finished={is_finished}, type={type(res)}")
+                if is_finished:
                     final_outputs.append(res)
         except asyncio.CancelledError:
             return self.create_error_response("Client disconnected")

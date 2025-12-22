@@ -913,6 +913,7 @@ async def _stage_worker_async(
     final_output_type = stage_payload.get("final_output_type", None)
     # Enable token-level streaming for text output stages only
     enable_token_streaming = final_output and final_output_type == "text"
+    print(f"[DEBUG Stage-{stage_id}] final_output={final_output}, final_output_type={final_output_type}, enable_token_streaming={enable_token_streaming}", flush=True)
 
     log_file = omni_stage._log_file
     in_q = omni_stage._in_q
@@ -1192,6 +1193,7 @@ async def _stage_worker_async(
                 gen_output = res
                 # For text output stages, send intermediate streaming results
                 if enable_token_streaming and not res.finished:
+                    print(f"[DEBUG Stage-{stage_id}] Sending intermediate result, res.finished={res.finished}", flush=True)
                     out_q.put(
                         {
                             "request_id": rid,

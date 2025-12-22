@@ -407,6 +407,7 @@ class AsyncOmni(EngineClient):
                     if getattr(stage, "final_output", False):
                         if isinstance(engine_outputs, list):
                             engine_outputs = engine_outputs[0]
+                        logger.debug(f"[DEBUG] Yielding intermediate result with finished=False")
                         yield OmniRequestOutput(
                             stage_id=stage_id,
                             final_output_type=stage.final_output_type,
@@ -467,6 +468,7 @@ class AsyncOmni(EngineClient):
 
                     if isinstance(engine_outputs, list):
                         engine_outputs = engine_outputs[0]
+                    logger.debug(f"[DEBUG] Yielding final result with finished=True")
                     yield OmniRequestOutput(
                         stage_id=stage_id,
                         final_output_type=stage.final_output_type,
