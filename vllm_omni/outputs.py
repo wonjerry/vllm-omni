@@ -42,12 +42,12 @@ class OmniRequestOutput:
     """
 
     request_id: str = ""
-    finished: bool = True
 
     # Pipeline stage fields
     stage_id: int | None = None
     final_output_type: str = "text"
     request_output: RequestOutput | None = None
+    finished: bool = True  # For streaming: False for intermediate, True for final
 
     # Diffusion model fields
     images: list[Image.Image] = field(default_factory=list)
@@ -125,6 +125,56 @@ class OmniRequestOutput:
     def is_pipeline_output(self) -> bool:
         """Check if this is a pipeline stage output."""
         return self.stage_id is not None and self.request_output is not None
+
+    # Delegate properties to request_output for compatibility with RequestOutput interface
+    @property
+    def prompt_token_ids(self):
+        """Delegate to request_output.prompt_token_ids."""
+        if self.request_output is not None:
+            return self.request_output.prompt_token_ids
+        return None
+
+    @property
+    def encoder_prompt_token_ids(self):
+        """Delegate to request_output.encoder_prompt_token_ids."""
+        if self.request_output is not None:
+            return getattr(self.request_output, "encoder_prompt_token_ids", None)
+        return None
+
+    @property
+    def num_cached_tokens(self):
+        """Delegate to request_output.num_cached_tokens."""
+        if self.request_output is not None:
+            return getattr(self.request_output, "num_cached_tokens", 0)
+        return 0
+
+    @property
+    def outputs(self):
+        """Delegate to request_output.outputs."""
+        if self.request_output is not None:
+            return self.request_output.outputs
+        return []
+
+    @property
+    def prompt_logprobs(self):
+        """Delegate to request_output.prompt_logprobs."""
+        if self.request_output is not None:
+            return getattr(self.request_output, "prompt_logprobs", None)
+        return None
+
+    @property
+    def kv_transfer_params(self):
+        """Delegate to request_output.kv_transfer_params."""
+        if self.request_output is not None:
+            return getattr(self.request_output, "kv_transfer_params", None)
+        return None
+
+    @property
+    def multi_modal_placeholders(self):
+        """Delegate to request_output.multi_modal_placeholders."""
+        if self.request_output is not None:
+            return getattr(self.request_output, "multi_modal_placeholders", None)
+        return None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

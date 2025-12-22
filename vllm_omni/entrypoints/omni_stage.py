@@ -209,6 +209,8 @@ class OmniStage:
             "runtime": runtime_cfg,
             "shm_threshold_bytes": self._shm_threshold_bytes,
             "connectors_config": connectors_config or {},
+            "final_output": self.final_output,
+            "final_output_type": self.final_output_type,
         }
 
         if worker_backend == "ray":
@@ -907,6 +909,10 @@ async def _stage_worker_async(
     runtime_cfg = stage_payload.get("runtime", {})
     shm_threshold_bytes = int(stage_payload.get("shm_threshold_bytes", 65536))
     connectors_config = stage_payload.get("connectors_config", {})
+    final_output = stage_payload.get("final_output", False)
+    final_output_type = stage_payload.get("final_output_type", None)
+    # Enable token-level streaming for text output stages only
+    enable_token_streaming = final_output and final_output_type == "text"
 
     log_file = omni_stage._log_file
     in_q = omni_stage._in_q
@@ -1181,8 +1187,20 @@ async def _stage_worker_async(
             if isinstance(ein, list):
                 ein = ein[0]
 
+            gen_output = None
             async for res in stage_engine.generate(ein, sampling_params, rid):
                 gen_output = res
+                # For text output stages, send intermediate streaming results
+                if enable_token_streaming and not res.finished:
+                    out_q.put(
+                        {
+                            "request_id": rid,
+                            "stage_id": stage_id,
+                            "engine_outputs": [res],
+                            "finished": False,
+                            "metrics": {},
+                        }
+                    )
             _gen_t1 = _time.time()
             _gen_ms = (_gen_t1 - _gen_t0) * 1000.0
 
@@ -1231,6 +1249,7 @@ async def _stage_worker_async(
                             "request_id": rid,
                             "stage_id": stage_id,
                             "engine_outputs_shm": payload,
+                            "finished": True,
                             "metrics": _metrics,
                         }
                     )
@@ -1240,6 +1259,7 @@ async def _stage_worker_async(
                             "request_id": rid,
                             "stage_id": stage_id,
                             "engine_outputs": payload,
+                            "finished": True,
                             "metrics": _metrics,
                         }
                     )
@@ -1263,6 +1283,7 @@ async def _stage_worker_async(
                         "request_id": rid,
                         "stage_id": stage_id,
                         "engine_outputs": r_outputs,
+                        "finished": True,
                         "metrics": {
                             "num_tokens_out": int(count_tokens_from_outputs(r_outputs)),
                             "stage_gen_time_ms": _gen_ms,
