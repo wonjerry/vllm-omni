@@ -9,7 +9,6 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, Optional
 
 import jinja2
-import msgspec.structs
 from fastapi import Request
 from PIL import Image
 from pydantic import TypeAdapter
@@ -415,20 +414,19 @@ class OmniOpenAIServingChat(OpenAIServingChat):
                 return idx
         raise ValueError("No thinker stage (is_comprehension=True) found in stage_list")
 
-    def _get_common_sampling_fields(self) -> set[str]:
-        """Get field names common to both ChatCompletionRequest and SamplingParams.
-
-        Uses caching to avoid repeated reflection overhead.
-
-        Returns:
-            Set of field names that exist in both classes.
-        """
-        if not hasattr(self, "_common_fields_cache"):
-            # ChatCompletionRequest is Pydantic model, SamplingParams is msgspec struct
-            request_fields = set(ChatCompletionRequest.model_fields.keys())
-            params_fields = {f.name for f in msgspec.structs.fields(SamplingParams)}
-            self._common_fields_cache = request_fields & params_fields
-        return self._common_fields_cache
+    # OpenAI API standard sampling parameters that can be safely overridden.
+    # These are the most commonly used parameters with compatible types
+    # between ChatCompletionRequest and SamplingParams.
+    # Users who need more control can use sampling_params_list in extra_body.
+    _OPENAI_SAMPLING_FIELDS: set[str] = {
+        "temperature",
+        "top_p",
+        "max_tokens",
+        "seed",
+        "stop",
+        "frequency_penalty",
+        "presence_penalty",
+    }
 
     def _apply_request_overrides(
         self,
@@ -449,7 +447,7 @@ class OmniOpenAIServingChat(OpenAIServingChat):
         """
         params = default_params.clone()
 
-        for field_name in self._get_common_sampling_fields():
+        for field_name in self._OPENAI_SAMPLING_FIELDS:
             value = getattr(request, field_name, None)
             if value is not None:
                 setattr(params, field_name, value)
