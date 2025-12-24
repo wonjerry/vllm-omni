@@ -447,11 +447,16 @@ class OmniOpenAIServingChat(OpenAIServingChat):
         """
         params = default_params.clone()
 
+        logger.info(f"[SamplingParams] YAML defaults: seed={default_params.seed}, temp={default_params.temperature}")
+        logger.info(f"[SamplingParams] Request values: seed={request.seed}, temp={request.temperature}")
+
         for field_name in self._OPENAI_SAMPLING_FIELDS:
             value = getattr(request, field_name, None)
             if value is not None:
+                logger.info(f"[SamplingParams] Overriding {field_name}: {getattr(params, field_name)} -> {value}")
                 setattr(params, field_name, value)
 
+        logger.info(f"[SamplingParams] Final params: seed={params.seed}, temp={params.temperature}")
         return params
 
     def _build_sampling_params_list_from_request(
