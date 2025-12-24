@@ -424,7 +424,8 @@ class OmniOpenAIServingChat(OpenAIServingChat):
             Set of field names that exist in both classes.
         """
         if not hasattr(self, "_common_fields_cache"):
-            request_fields = {f.name for f in msgspec.structs.fields(ChatCompletionRequest)}
+            # ChatCompletionRequest is Pydantic model, SamplingParams is msgspec struct
+            request_fields = set(ChatCompletionRequest.model_fields.keys())
             params_fields = {f.name for f in msgspec.structs.fields(SamplingParams)}
             self._common_fields_cache = request_fields & params_fields
         return self._common_fields_cache
